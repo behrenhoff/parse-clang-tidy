@@ -79,8 +79,8 @@ for my $checker (@sortedCheckers) {
 
 use DBI;
 my $dbh = DBI->connect("dbi:SQLite:dbname=result.sqlite","","", {AutoCommit=>0});
-$dbh->do("CREATE TABLE IF NOT EXISTS result (file TEXT, topdir TEXT, checker TEXT)");
-my $dbInsert = $dbh->prepare("INSERT INTO result VALUES (?,?,?)");
+$dbh->do("CREATE TABLE IF NOT EXISTS result (file TEXT, topdir TEXT, checker TEXT, position TEXT)");
+my $dbInsert = $dbh->prepare("INSERT INTO result VALUES (?,?,?,?)");
 
 
 open my $testjs, '>', "test.js" or die $!;
@@ -94,7 +94,7 @@ RESULT: for my $showChecker (@sortedCheckers) {
             for my $checker (sort keys %$checkerHref) {
                 next if $checker ne $showChecker;
                 if ($filename =~ m#^src/(\w+)/.*\.cxx$#) {
-                    $dbInsert->execute($filename, $1, $checker);
+                    $dbInsert->execute($filename, $1, $checker, $position);
                 }
                 print $testjs "[";
                 print $testjs join ", ", 
