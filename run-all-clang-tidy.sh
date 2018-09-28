@@ -2,8 +2,8 @@
 
 set -e
 
+# For running multi-core
 N_CPUS_AVAILABLE=$(grep processor /proc/cpuinfo | wc -l)
-
 maxbg() {
     local sleeptime=1
     local maxjobs=1
@@ -21,13 +21,28 @@ mkdir -p clang-tidy
 
 while read category checkers; do
 
-    echo "Checking category $category"
-    run-clang-tidy-7.py -quiet -header-filter=.\* -checks="-*,$checkers" -j1 \
-        ../src \
-        2> /dev/null \
-        | grep -v -- "-checks=-\*,$checkers" \
-        > "clang-tidy/$category.log" &
-    maxbg 8 1
+    for srcdir in ../src/*; do
+        # Only select source directories
+        if ! [[ -d "$srcdir" ]] || ! [[ -e "$srcdir/CMakeLists.txt" ]]; then
+            continue
+        fi
+
+        topdir=$(basename "$srcdir")
+        if ! [[ "$topdir" == "interpreter" ]]; then
+            # Exclude large LLVM directory
+            continue
+        fi
+
+        echo "Checking category $category in $topdir"
+        mkdir -p "clang-tidy/$topdir"
+        run-clang-tidy-7.py -quiet -header-filter=.\* -checks="-*,$checkers" -j1 \
+            "$srcdir" \
+            2> /dev/null \
+            | grep -v -- "-checks=-\*,$checkers" \
+            > "clang-tidy/$topdir/$category.log" &
+        maxbg $N_CPUS_AVAILABLE 1
+
+    done
 
 done < <( \
     clang-tidy-7 -list-checks -checks=\* \
@@ -47,7 +62,6 @@ done < <( \
 | grep -v google-readability-braces-around-statements            \
 | grep -v google-readability-namespace-comments                  \
 | grep -v google-runtime-references                              \
-| grep -v google-runtime-references                              \
 | grep -v hicpp-braces-around-statements                         \
 | grep -v hicpp-no-array-decay                                   \
 | grep -v hicpp-use-auto                                         \
@@ -59,16 +73,27 @@ done < <( \
 | grep -v llvm-include-order                                     \
 | grep -v llvm-namespace-comment                                 \
 | grep -v modernize-pass-by-value                                \
-| grep -v modernize-use-emplace                                  \
-| grep -v modernize-use-equals-default                           \
-| grep -v modernize-use-equals-delete                            \
-| grep -v modernize-use-override                                 \
 | grep -v readability-braces-around-statements                   \
 | grep -v readability-implicit-bool-cast                         \
 | grep -v readability-implicit-bool-conversion                   \
-    | perl -nE 'chomp;s/ //g;next unless $_;($cat,$c) = split/-/,$_,2;push @{$all{$cat}},$_;END{while(($k,$v)=each%all){print"$k ";say join ",", @$v}}' \
-    |sort
+| perl -nE 'chomp;
+            s/ //g;
+            next unless $_;
+            if ($_ eq "bugprone-macro-parentheses") {
+                push @{$all{"bugprone-mp"}}, $_;
+            } elsif (/modernize-use-(emplace|equals-default|equals-delete|override)/) {
+                push @{$all{"modernize-use"}}, $_;
+            } else {
+                ($cat, $c) = split/-/, $_, 2;
+                push @{$all{$cat}}, $_;
+            }
+            END {
+                while (($k, $v) = each %all) {
+                    print "$k ";
+                    say join ",", @$v;
+                }
+            }' \
+| sort
 )
 
 wait
-
