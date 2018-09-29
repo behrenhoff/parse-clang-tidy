@@ -4,8 +4,16 @@ use 5.18.0;
 use warnings;
 use Data::Dumper;
 
-my $fileremove = '/home/behrenhoff/root-head/src/';
+# Need both the source and the build directory since ROOT copies .h files to the buildpath
+my $srcpath = '/home/behrenhoff/root-head/src/';
+my $buildpath = '/home/behrenhoff/root-head/root-master-20180928-4831835e28fe3f182409bea54dc61b148e1461a0/';
+
 my $disabledCheckersRE = 'cppcoreguidelines-owning-memory|hicpp-use-auto|hicpp-no-array-decay|hicpp-vararg|readability-non-const-parameter|google-readability-namespace-comments|hicpp-use-nullptr|google-readability-casting|cppcoreguidelines-pro-type-cstyle-cast';
+
+
+my $fileremove = qr($srcpath|$buildpath);
+
+
 #'modernize|hicpp-signed-bitwise';
 
 sub checkerIsDiabled {
@@ -22,7 +30,9 @@ sub parseInput {
         my ($file, $position, $message, $checker);
         open my $FH, '<', $filename or die $!;
         while (my $line = <$FH>) {
-            if ($line =~ m#(/home\S+):(\d+:\d+): (.+)\[(.+?)(?:,-warnings-as-errors)?\]$#) {
+            # print "trying $line";
+            if ($line =~ m#((?:/home|include/)\S+):(\d+:\d+): (.+)\[(.+?)(?:,-warnings-as-errors)?\]$#) {
+                # print "matched\n";
                 if ($file) {
                     if (!checkerIsDiabled($checker)) {
                         ++$checkerCount{$checker} unless exists $files{$file}{$position}{$checker};
@@ -32,11 +42,11 @@ sub parseInput {
                 }
                 ($file, $position, $message, $checker) = ($1, $2, $3, $4);
                 #print Dumper [($1, $2, $3, $4)];
-                $file =~ s/\Q$fileremove//;
+                $file =~ s/$fileremove//;
             } else {
                 # print Dumper ["No match: ", $line];
                 if ($line !~ m# -quiet /home#) {
-                    $line =~ s/\Q$fileremove//;
+                    $line =~ s/$fileremove//;
                     $verbose .= $line if $file;
                 }
             }
