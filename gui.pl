@@ -1,10 +1,14 @@
 #!/usr/bin/perl
 
-use Mojolicious::Lite;
-# use Mojo::SQLite;
 use DBI;
+use File::Slurp;
 use List::Util;
+use Mojolicious::Lite;
+use Mojo::JSON qw(from_json);
+# use Mojo::SQLite;
 use Text::Wrap qw(wrap); $Text::Wrap::columns = 120;
+
+my $includeLookup = from_json(read_file("include_to_src.json"));
 
 # helper sqlite => sub { state $sql = Mojo::SQLite->new('sqlite:result.sqlite') };
 helper sqlite => sub {
@@ -67,13 +71,29 @@ get '/detail' => sub {
         $c->redirect_to('/');
     }
     for my $p (@$problems) {
-        $p->{file} =~ s!^src/!!;
+        if ($p->{file} =~ s!^include/!!) {
+            # we are dealing with include files...
+            my $fn = $p->{file};
+            $fn =~ s/^include\///;
+            my $lookup = $includeLookup->{$fn};
+            die "Error $p->{file}" if !$lookup;
+            my $n = @$lookup;
+            if ($n == 0) {
+                $p->{file} .= "\n<br>Could not find file in source tree.";
+            } elsif ($n == 1) {
+                $p->{url} = $lookup->[0];
+            } else {
+                $p->{file} = "Unclear file origin. Candidates:<br>\n" . join(" or<br>\n", @$lookup);
+            }
+        } else {
+            $p->{url} = $p->{file};
+        }
         $p->{code} = wrap('', '', $p->{code});
     }
 
     $c->render(template => 'detail',
                problems => $problems,
-               srcprefix => 'https://github.com/root-project/root/blob/4831835e28fe3f182409bea54dc61b148e1461a0/'
+               srcprefix => 'https://github.com/root-project/root/blob/e107f7552a2df423778bb0a82d603d20bf9b7302/'
                );
 };
 
@@ -93,7 +113,7 @@ __DATA__
         <a href="#" onclick="hide_all(); return false;">[Hide details]</a>
     </th>
     <% for my $topdir (@$topdirs) { %>
-        <th><a href="detail?topdir=<%= $topdir %>"><%= $topdir %></a></th>
+        <th style="text-align:center"><a href="detail?topdir=<%= $topdir %>"><%= $topdir %></a></th>
     <% } %>
     </tr>
 
@@ -132,7 +152,11 @@ __DATA__
 <tbody>
 <% for my $p (@$problems) { %>
     <tr>
-        <td><a href="<%= $srcprefix %><%= $p->{file} %>#L<%= $p->{line} %>"><%= $p->{file} %>:<%= $p->{line} %></a></td>
+        <% if (exists $p->{url}) { %>
+            <td><a href="<%= $srcprefix %><%= $p->{url} %>#L<%= $p->{line} %>"><%= $p->{file} %>:<%= $p->{line} %></a></td>
+        <% } else { %>
+            <td><%= $p->{file} %>:<%= $p->{line} %></td>
+        <% } %>
         <td><%= $p->{checker} %></td>
         <td><pre><%= $p->{code} %></pre></td>
     </tr>
@@ -164,7 +188,7 @@ table {
 }
 
 table, table th, table td {
-    border: 1px solid black;
+    border: 1px solid #aaaaaa;
     padding: 3px 5px 3px 5px;
 }
 
@@ -191,6 +215,9 @@ table.overview tr.checker th {
 
 table.overview span.show { display: none; }
 
+a {
+     text-decoration: none;
+}
 
 .dataTables_filter {
     font-size: 16px;
@@ -237,8 +264,8 @@ table.overview span.show { display: none; }
     </script>
   </head>
   <body>
-  <h2>clang-tidy results from 2018-09-28, ROOT master (C++14, Python3), ROOT commit 4831835e28fe3f182409bea54dc61b148e1461a0</h2>
-  <div class=bugs>Known problems: Github link to include files and roottest is broken; system include files from /include wrongly listed under include; bugprone* checks for the interpreter directory incomplete</div>
+  <h2>clang-tidy results from 2018-10-09, ROOT master (C++14, Python3), ROOT commit e107f7552a2df423778bb0a82d603d20bf9b7302</h2>
+  <div class=bugs>Known problems: Github link to include files and roottest is broken; system include files from /include wrongly listed under include; bugprone-* check does not work in the interpreter directory (takes >24 hours for a single file)</div>
   <%= content %>
   <div style="margin-top: 2em; margin-bottom:2em">Server hardware: Rapberry Pi Zero W!</div>
   <div style="font-size: x-small;color:grey">Impressum: Website betrieben von: Wolf Behrenhoff; Lobuschstr. 33; 22765 Hamburg; Germany<br>
