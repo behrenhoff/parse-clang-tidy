@@ -42,7 +42,6 @@ sub parseInput {
             }
             # if ($line =~ m#((?:/home|include/)\S+):(\d+:\d+): (.+)\[(.+?)(?:,-warnings-as-errors)?\]$#s) {
             if ($line =~ m#^(\S+):(\d+:\d+): (.+)\[(.+?)(?:,-warnings-as-errors)?\]$#s) {
-                say $1;
                 # print "matched\n";
                 if ($file) {
                     if (!checkerIsDiabled($checker)) {
