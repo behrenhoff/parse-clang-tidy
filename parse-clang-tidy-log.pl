@@ -6,7 +6,7 @@ use Data::Dumper;
 
 # Need both the source and the build directory since ROOT copies .h files to the buildpath
 my $srcpath = '/home/behrenhoff/root-head/src/';
-my $buildpath = '/home/behrenhoff/root-head/root-master-20180928-4831835e28fe3f182409bea54dc61b148e1461a0/';
+my $buildpath = '/home/behrenhoff/root-head/build-head/';
 
 my $disabledCheckersRE = 'cppcoreguidelines-owning-memory|hicpp-use-auto|hicpp-no-array-decay|hicpp-vararg|readability-non-const-parameter|google-readability-namespace-comments|hicpp-use-nullptr|google-readability-casting|cppcoreguidelines-pro-type-cstyle-cast';
 
@@ -40,7 +40,9 @@ sub parseInput {
                     last if index($lineContinuation, 'clang-analyzer-optin.performance.Padding') >= 0;
                 }
             }
-            if ($line =~ m#((?:/home|include/)\S+):(\d+:\d+): (.+)\[(.+?)(?:,-warnings-as-errors)?\]$#s) {
+            # if ($line =~ m#((?:/home|include/)\S+):(\d+:\d+): (.+)\[(.+?)(?:,-warnings-as-errors)?\]$#s) {
+            if ($line =~ m#^(\S+):(\d+:\d+): (.+)\[(.+?)(?:,-warnings-as-errors)?\]$#s) {
+                say $1;
                 # print "matched\n";
                 if ($file) {
                     if (!checkerIsDiabled($checker)) {
@@ -103,7 +105,7 @@ RESULT: for my $showChecker (@sortedCheckers) {
             my $checkerHref = $positionHref->{$position};
             for my $checker (sort keys %$checkerHref) {
                 next if $checker ne $showChecker;
-                if ($filename =~ m#^(\w+)/#) {
+                if ($filename =~ m#^(/?\w+)/#) {
                     $dbInsert->execute($filename, $1, $checker, $posLine, $posCol, $checkerHref->{$checker});
                 }
                 print $testjs "[";

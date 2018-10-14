@@ -76,16 +76,15 @@ get '/detail' => sub {
             my $fn = $p->{file};
             $fn =~ s/^include\///;
             my $lookup = $includeLookup->{$fn};
-            die "Error $p->{file}" if !$lookup;
-            my $n = @$lookup;
-            if ($n == 0) {
+            # die "Error $p->{file}" if !$lookup;
+            if (!defined $lookup || @$lookup == 0) {
                 $p->{file} .= "\n<br>Could not find file in source tree.";
-            } elsif ($n == 1) {
+            } elsif (@$lookup == 1) {
                 $p->{url} = $lookup->[0];
             } else {
                 $p->{file} = "Unclear file origin. Candidates:<br>\n" . join(" or<br>\n", @$lookup);
             }
-        } else {
+        } elsif ($p->{file} !~ m!^/!) {
             $p->{url} = $p->{file};
         }
         $p->{code} = wrap('', '', $p->{code});
@@ -265,7 +264,7 @@ a {
   </head>
   <body>
   <h2>clang-tidy results from 2018-10-09, ROOT master (C++14, Python3), ROOT commit e107f7552a2df423778bb0a82d603d20bf9b7302</h2>
-  <div class=bugs>Known problems: Github link to include files and roottest is broken; system include files from /include wrongly listed under include; bugprone-* check does not work in the interpreter directory (takes >24 hours for a single file)</div>
+  <div class=bugs>Known problems: everything is a bit slow, please be patient!</div>
   <%= content %>
   <div style="margin-top: 2em; margin-bottom:2em">Server hardware: Rapberry Pi Zero W!</div>
   <div style="font-size: x-small;color:grey">Impressum: Website betrieben von: Wolf Behrenhoff; Lobuschstr. 33; 22765 Hamburg; Germany<br>
