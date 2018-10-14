@@ -31,7 +31,16 @@ sub parseInput {
         open my $FH, '<', $filename or die $!;
         while (my $line = <$FH>) {
             # print "trying $line";
-            if ($line =~ m#((?:/home|include/)\S+):(\d+:\d+): (.+)\[(.+?)(?:,-warnings-as-errors)?\]$#) {
+            if ($line =~ /error: Excessive padding .* \(\d+ padding bytes, where \d+ is optimal\)\./) {
+                # This check has a multiline description. Therfore merge lines until the end.
+                # Important: this is output twice: "note: Excessive..." and "error: Excessive..." - only
+                # recognize the error: ... line here!
+                while (my $lineContinuation = <$FH>) {
+                    $line .= $lineContinuation;
+                    last if index($lineContinuation, 'clang-analyzer-optin.performance.Padding') >= 0;
+                }
+            }
+            if ($line =~ m#((?:/home|include/)\S+):(\d+:\d+): (.+)\[(.+?)(?:,-warnings-as-errors)?\]$#s) {
                 # print "matched\n";
                 if ($file) {
                     if (!checkerIsDiabled($checker)) {
@@ -103,7 +112,7 @@ RESULT: for my $showChecker (@sortedCheckers) {
                                 (map { quotejs($_) } $filename, $position, $checker), 
                                 "<pre><code>" . quotejs($checkerHref->{$checker}) . "</code></pre>";
                 say $testjs "],";
-                last RESULT if ++$count == 2000;
+                # last RESULT if ++$count == 2000;
             }
         }
     }
