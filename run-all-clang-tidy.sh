@@ -4,6 +4,11 @@ set -e
 
 # For running multi-core
 N_CPUS_AVAILABLE=$(grep processor /proc/cpuinfo | wc -l)
+if [[ "$1" == "-j" ]] && (( $2 > 0 )) && (( $2 < 2*$N_CPUS_AVAILABLE)) ; then
+    N_CPUS_AVAILABLE=$2
+    echo "Using $2 processes in parallel"
+fi
+
 maxbg() {
     local sleeptime=1
     local maxjobs=1
@@ -28,8 +33,9 @@ while read category checkers; do
         fi
 
         topdir=$(basename "$srcdir")
-        if ! [[ "$topdir" == "interpreter" ]]; then
-            # Exclude large LLVM directory
+        if ! [[ "$topdir" == "interpreter" ]] && [[ "$category" == "bugprone-exception-escape" ]]; then
+            # Exclude large LLVM directory for bugprone-exception-escape
+            # since it runs forever
             continue
         fi
 
@@ -79,8 +85,8 @@ done < <( \
 | perl -nE 'chomp;
             s/ //g;
             next unless $_;
-            if ($_ eq "bugprone-macro-parentheses") {
-                push @{$all{"bugprone-mp"}}, $_;
+            if ($_ eq "bugprone-macro-parentheses") { # produces a LOT of output
+                push @{$all{$_}}, $_;
             } elsif (/modernize-use-(emplace|equals-default|equals-delete|override)/) {
                 push @{$all{"modernize-use"}}, $_;
             } else {
