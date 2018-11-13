@@ -92,7 +92,7 @@ get '/detail' => sub {
 
     $c->render(template => 'detail',
                problems => $problems,
-               srcprefix => 'https://github.com/root-project/root/blob/e107f7552a2df423778bb0a82d603d20bf9b7302/'
+               srcprefix => 'https://github.com/root-project/root/blob/c716de08e98d51a2b17bd2aa29e19d3402ec81e8/'
                );
 };
 
@@ -263,7 +263,7 @@ a {
     </script>
   </head>
   <body>
-  <h2>clang-tidy results from 2018-10-09, ROOT master (C++14, Python3), ROOT commit e107f7552a2df423778bb0a82d603d20bf9b7302</h2>
+  <h2>clang-tidy-8 (head version) results from 2018-11-12, ROOT master (C++14, Python3), ROOT commit c716de08e98d51a2b17bd2aa29e19d3402ec81e8</h2>
   <div class=bugs>Known problems: everything is a bit slow, please be patient!</div>
   <%= content %>
   <div style="margin-top: 2em; margin-bottom:2em">Server hardware: Rapberry Pi Zero W!</div>

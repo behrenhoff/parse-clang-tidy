@@ -8,7 +8,7 @@ use Data::Dumper;
 my $srcpath = '/home/behrenhoff/root-head/src/';
 my $buildpath = '/home/behrenhoff/root-head/build-head/';
 
-my $disabledCheckersRE = 'cppcoreguidelines-owning-memory|hicpp-use-auto|hicpp-no-array-decay|hicpp-vararg|readability-non-const-parameter|google-readability-namespace-comments|hicpp-use-nullptr|google-readability-casting|cppcoreguidelines-pro-type-cstyle-cast';
+my $disabledCheckersRE = 'cppcoreguidelines-owning-memory|hicpp-use-auto|hicpp-no-array-decay|hicpp-vararg|readability-non-const-parameter|google-readability-namespace-comments|hicpp-use-nullptr|google-readability-casting|cppcoreguidelines-pro-type-cstyle-cast|readability-implicit-bool-conversion|misc-non-private-member-variables-in-classes';
 
 
 my $fileremove = qr($srcpath|$buildpath);
