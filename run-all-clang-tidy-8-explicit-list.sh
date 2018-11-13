@@ -208,9 +208,7 @@ perl -E'print q(
     clang-analyzer-valist.Uninitialized
     clang-analyzer-valist.Unterminated
     cppcoreguidelines-avoid-goto
-    cppcoreguidelines-narrowing-conversions
     cppcoreguidelines-no-malloc
-    cppcoreguidelines-pro-bounds-constant-array-index
     cppcoreguidelines-slicing
     cppcoreguidelines-special-member-functions
     google-build-explicit-make-pair
@@ -228,7 +226,6 @@ perl -E'print q(
     hicpp-new-delete-operators
     hicpp-no-assembler
     hicpp-noexcept-move
-    hicpp-special-member-functions
     hicpp-static-assert
     hicpp-undelegated-constructor
     hicpp-uppercase-literal-suffix
@@ -274,7 +271,6 @@ perl -E'print q(
     readability-identifier-naming
     readability-implicit-bool-conversion
     readability-inconsistent-declaration-parameter-name
-    readability-isolate-declaration
     readability-misleading-indentation
     readability-misplaced-array-index
     readability-named-parameter

@@ -6,16 +6,38 @@ use List::Util;
 use Mojolicious::Lite;
 use Mojo::JSON qw(from_json);
 # use Mojo::SQLite;
-use Text::Wrap qw(wrap); $Text::Wrap::columns = 120;
+use Text::Wrap qw(wrap); $Text::Wrap::columns = 100;
 
 my $includeLookup = from_json(read_file("include_to_src.json"));
 
+sub get_database_handle {
+    return DBI->connect("dbi:SQLite:dbname=result.sqlite","","", {AutoCommit=>0});
+}
+
+sub recreateImportanceTable {
+    say "Recreating importance table...";
+    my $db = get_database_handle();
+    my $ary_ref  = $db->selectall_arrayref("select checker, count(*) from result group by checker;");
+    my %result;
+    $result{$_->[0]} = $_->[1] for @$ary_ref;
+    $db->do("drop table if exists checker_importance");
+    $db->do("create table checker_importance (ci_checker TEXT PRIMARY KEY, importance INTEGER)");
+    my $dbInsert = $db->prepare("INSERT INTO checker_importance VALUES (?,?)");
+    while (my ($c, $i) = each %result) {
+        say "Inserting $c=$i";
+        $dbInsert->execute($c, $i);
+    }
+    $db->commit();
+    $db->disconnect();
+    say "Done recreating importance table.";
+}
+
 # helper sqlite => sub { state $sql = Mojo::SQLite->new('sqlite:result.sqlite') };
 helper sqlite => sub {
-    my $dbh = DBI->connect("dbi:SQLite:dbname=result.sqlite","","", {});
+    my $dbh = get_database_handle();
     return $dbh;
 };
- 
+
 get '/' => sub {
     my $c  = shift;
     my $db = $c->sqlite; # no Mojo::SQLite
@@ -53,8 +75,8 @@ get '/detail' => sub {
 
     #CREATE TABLE result (file TEXT, topdir TEXT, checker TEXT, line INTEGER, col INTEGER, code TEXT);
     my $problems;
-    my $query = "select file, checker, line, col, code from result ";
-    my $orderby = "order by checker, file, line";
+    my $query = "select file, checker, line, col, code, importance from result join checker_importance on checker = ci_checker";
+    my $orderby = "order by importance, file, line limit 5000";
     if ($checker && $topdir) {
         $problems = $db->selectall_arrayref(
             "$query where topdir = ? and checker LIKE ? $orderby;",
@@ -82,20 +104,23 @@ get '/detail' => sub {
             } elsif (@$lookup == 1) {
                 $p->{url} = $lookup->[0];
             } else {
-                $p->{file} = "Unclear file origin. Candidates:<br>\n" . join(" or<br>\n", @$lookup);
+                $p->{file} = "Unclear file origin.<br>Candidates:<br>\n" . join(" or<br>\n", @$lookup);
             }
         } elsif ($p->{file} !~ m!^/!) {
             $p->{url} = $p->{file};
+            $p->{file} =~ s!(.*)/(.*)!$1/<br>$2!;
         }
+        $p->{checker} =~ s!(.*?[.-])!$1<br>!g;
         $p->{code} = wrap('', '', $p->{code});
     }
-
+    $db->disconnect();
     $c->render(template => 'detail',
                problems => $problems,
                srcprefix => 'https://github.com/root-project/root/blob/c716de08e98d51a2b17bd2aa29e19d3402ec81e8/'
                );
 };
 
+recreateImportanceTable();
 app->start;
 
 
@@ -144,20 +169,21 @@ __DATA__
 % title 'clang-tidy - ROOT - detailled report';
 % layout 'defaultLayout';
 
-<table id="resultlist">
+<table id="resultlist" class="order-column">
 <thead>
-<tr><th>Filename</th><th>Checker</th><th>Problem</th></tr>
+<tr><th>Filename</th><th>Checker</th><th>Problem</th><th>Importance<br>lower=higher</th></tr>
 </thead>
 <tbody>
 <% for my $p (@$problems) { %>
     <tr>
         <% if (exists $p->{url}) { %>
-            <td><a href="<%= $srcprefix %><%= $p->{url} %>#L<%= $p->{line} %>"><%= $p->{file} %>:<%= $p->{line} %></a></td>
+            <td><a href="<%= $srcprefix %><%= $p->{url} %>#L<%= $p->{line} %>"><%== $p->{file} %>:<%= $p->{line} %></a></td>
         <% } else { %>
-            <td><%= $p->{file} %>:<%= $p->{line} %></td>
+            <td><%== $p->{file} %>:<%= $p->{line} %></td>
         <% } %>
-        <td><%= $p->{checker} %></td>
+        <td><%== $p->{checker} %></td>
         <td><pre><%= $p->{code} %></pre></td>
+        <td><%= $p->{importance} %></td>
     </tr>
 <% } %>
 
@@ -170,6 +196,7 @@ __DATA__
 <html>
   <head>
     <title><%= title %></title>
+    <link rel="stylesheet" type="text/css" href="https://cdn.datatables.net/1.10.19/css/jquery.dataTables.min.css">
 <style>
 
 body {
@@ -183,7 +210,7 @@ div.bugs {
 }
 
 table {
-    border-collapse: collapse;
+    border-collapse: collapse !important;
 }
 
 table, table th, table td {
@@ -229,12 +256,14 @@ a {
     background-color: ghostwhite;
 }
 
+#resultlist_filter { float: left; }
+
 </style>
     <script type="text/javascript" language="javascript" src="https://code.jquery.com/jquery-3.3.1.min.js"></script>
     <script type="text/javascript" language="javascript" src="https://cdn.datatables.net/1.10.19/js/jquery.dataTables.min.js"></script>
     <script type="text/javascript" language="javascript">
         $(document).ready( function () {
-            $('#resultlist').DataTable({paging: false, ordering: false});
+            $('#resultlist').DataTable({paging: false, order: []});
         } );
 
         function show_all() {
