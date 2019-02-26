@@ -4,14 +4,15 @@ Using the scripts in this repository, you can
 
 * parse the output of clang-tidy
 * store the result in a sqlite3 database
-* create a small webpage for better/easier searching
+* create a single-page website for fulltext search (for small projects only)
+* create a webapp (using a local webserver) for overview in large projects
 
 ## Before you begin
 
 ### Dependencies
 * Perl >= 5.18
 * Mojolicious (if you want to run the gui)
-* SQLite3 and corresponding Perl DBB driver
+* SQLite3 and corresponding Perl DBD driver
 * and of course: clang-tidy!
 
 On Ubuntu, run:
@@ -72,7 +73,7 @@ Then open a browser and navigate to: `http://127.0.0.1:3000`
 
 ## Advanced stuff
 
-Running on large projects can cause problems if your log file is several 10 or 100 gigabytes large. So you cannot keep everything in RAM. To solve the problem, run clang-tidy multiple times for different checks. For example, run one clang-tidy instance for checks=bugprone*, one instance for modernize checks, ... (don't forget to disable all other checks!). Store the results in different log files. Then parse one log file at a time. Since `parse-clang-tidy-log.pl` appends to the database, your DB will contain the full result at the end. On the other hand, please do NOT split on subdirectories. If you do, you still need to parse ALL log files at the same time to avoid duplicates from header files. You CAN do this split for performance reasons. Have a look at the .sh files in this project. They split by subdirectory and by checker.
+Running on large projects can cause problems if your log file is several 10 or 100 gigabytes large. So you cannot keep everything in RAM. To solve the problem, run clang-tidy multiple times for different checks. For example, run one clang-tidy instance for checks=bugprone*, one instance for modernize checks, ... (don't forget to disable all other checks!). Store the results in different log files. Then parse one log file at a time. Since `parse-clang-tidy-log.pl` appends to the database, your DB will contain the full result at the end. On the other hand, please do not split on subdirectories for memory reasons during parsing. Problem is, if you do, you still need to parse all log file outputs of the same checker at the same time to avoid duplicates from header files. You CAN however do this split for performance reasons. Have a look at the .sh files in this project. They split by subdirectory and by checker.
 
 ## Final word of warning
 
